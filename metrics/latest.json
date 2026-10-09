@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-09T01:40:04.816743+00:00",
+  "generated_at": "2026-10-09T23:30:08.040994+00:00",
   "period_days": 30,
   "overview": {
     "messages_period": 55,
@@ -67,7 +67,7 @@
   },
   "knowledge": {
     "discord_chunks": 5,
-    "wiki_pages": 705,
-    "wiki_chunks": 3460
+    "wiki_pages": 728,
+    "wiki_chunks": 3573
   }
 }
