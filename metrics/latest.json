@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-10-09T01:40:04.816743+00:00",
+  "period_days": 30,
+  "overview": {
+    "messages_period": 55,
+    "threads_period": 7,
+    "messages_processed": 19,
+    "total_messages": 55,
+    "total_threads": 7
+  },
+  "messages_per_day": [
+    {
+      "day": "2026-10-02",
+      "messages": 8,
+      "threads": 0
+    },
+    {
+      "day": "2026-10-04",
+      "messages": 6,
+      "threads": 1
+    },
+    {
+      "day": "2026-10-05",
+      "messages": 9,
+      "threads": 1
+    },
+    {
+      "day": "2026-10-06",
+      "messages": 32,
+      "threads": 5
+    }
+  ],
+  "response_times": {
+    "threads_with_data": 5,
+    "avg_first_response_min": "21.4",
+    "median_first_response_min": "2.7",
+    "avg_resolution_min": "22.0",
+    "median_resolution_min": "3.1"
+  },
+  "rag_events": {
+    "total": 10,
+    "public_replies": 10,
+    "public_rate_pct": 100.0,
+    "by_source": {
+      "command": 10,
+      "auto": 0,
+      "assistant": 0
+    },
+    "avg_similarity": 0.623
+  },
+  "rag_events_daily": [
+    {
+      "day": "2026-10-06",
+      "source": "command",
+      "total": 1
+    },
+    {
+      "day": "2026-10-08",
+      "source": "command",
+      "total": 9
+    }
+  ],
+  "feedback": {
+    "up": 5,
+    "down": 0,
+    "positive_rate": 100.0
+  },
+  "knowledge": {
+    "discord_chunks": 5,
+    "wiki_pages": 705,
+    "wiki_chunks": 3460
+  }
+}

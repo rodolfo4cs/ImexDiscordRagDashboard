@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Suporte RAG — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3b82f6;
+      --ok: #22c55e;
+      --bad: #ef4444;
+      --border: #2a3544;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 0.875rem; }
+    main { padding: 1.25rem 1.5rem 2.5rem; max-width: 1200px; margin: 0 auto; }
+    h2 { font-size: 1rem; margin: 1.5rem 0 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .card .label { color: var(--muted); font-size: 0.75rem; margin-bottom: 0.35rem; }
+    .card .value { font-size: 1.5rem; font-weight: 700; }
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    .chart-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      min-height: 280px;
+    }
+    .chart-box h3 { margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 600; }
+    .error {
+      background: #3f1d1d;
+      border: 1px solid var(--bad);
+      color: #fecaca;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 1.5rem;
+    }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 Suporte RAG — Métricas</h1>
+    <div class="meta" id="meta">Carregando…</div>
+  </header>
+  <div id="error" class="error" hidden></div>
+  <main id="app" hidden>
+    <h2>Visão geral</h2>
+    <div class="grid" id="kpis"></div>
+
+    <h2>Volume e atendimento</h2>
+    <div class="charts">
+      <div class="chart-box">
+        <h3>Mensagens / threads por dia</h3>
+        <canvas id="chartVolume"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Tempos (minutos)</h3>
+        <div class="grid" id="times"></div>
+      </div>
+    </div>
+
+    <h2>RAG e feedback</h2>
+    <div class="charts">
+      <div class="chart-box">
+        <h3>Eventos RAG por origem</h3>
+        <canvas id="chartRagSource"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Feedback 👍 / 👎</h3>
+        <canvas id="chartFeedback"></canvas>
+      </div>
+    </div>
+
+    <h2>Base de conhecimento</h2>
+    <div class="grid" id="knowledge"></div>
+  </main>
+  <footer>
+    Dados agregados · sem conteúdo de mensagens · export via <code>scripts/export_metrics.py</code>
+  </footer>
+
+  <script>
+    const METRICS_URL = './metrics/latest.json';
+
+    function el(id) { return document.getElementById(id); }
+
+    function kpi(label, value) {
+      return `<div class="card"><div class="label">${label}</div><div class="value">${value ?? '—'}</div></div>`;
+    }
+
+    function chartDefaults() {
+      Chart.defaults.color = '#8b9bb4';
+      Chart.defaults.borderColor = '#2a3544';
+    }
+
+    async function main() {
+      chartDefaults();
+      let data;
+      try {
+        const res = await fetch(METRICS_URL + '?t=' + Date.now());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        data = await res.json();
+      } catch (e) {
+        el('error').hidden = false;
+        el('error').textContent =
+          'Não foi possível carregar metrics/latest.json. Rode: python scripts/export_metrics.py — ' + e;
+        return;
+      }
+
+      el('app').hidden = false;
+      const gen = data.generated_at ? new Date(data.generated_at).toLocaleString('pt-BR') : '—';
+      el('meta').textContent = `Período: ${data.period_days} dias · Atualizado: ${gen}`;
+
+      const o = data.overview || {};
+      const r = data.rag_events || {};
+      const f = data.feedback || {};
+      const k = data.knowledge || {};
+      const t = data.response_times || {};
+
+      el('kpis').innerHTML = [
+        kpi('Msgs (período)', o.messages_period),
+        kpi('Threads (período)', o.threads_period),
+        kpi('Msgs processadas', o.messages_processed),
+        kpi('Msgs totais', o.total_messages),
+        kpi('Consultas RAG', r.total),
+        kpi('Taxa resp. pública', (r.public_rate_pct ?? 0) + '%'),
+        kpi('Feedback 👍', f.up),
+        kpi('Taxa positiva', (f.positive_rate ?? 0) + '%'),
+      ].join('');
+
+      el('times').innerHTML = [
+        kpi('1ª resp. mediana', t.median_first_response_min),
+        kpi('1ª resp. média', t.avg_first_response_min),
+        kpi('Resolução mediana', t.median_resolution_min),
+        kpi('Resolução média', t.avg_resolution_min),
+      ].join('');
+
+      el('knowledge').innerHTML = [
+        kpi('Chunks Discord', k.discord_chunks),
+        kpi('Páginas Wiki', k.wiki_pages),
+        kpi('Chunks Wiki', k.wiki_chunks),
+      ].join('');
+
+      // Volume
+      const days = (data.messages_per_day || []).map(d => d.day);
+      new Chart(el('chartVolume'), {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [
+            {
+              label: 'Mensagens',
+              data: (data.messages_per_day || []).map(d => d.messages),
+              borderColor: '#3b82f6',
+              tension: 0.25,
+              fill: false,
+            },
+            {
+              label: 'Threads',
+              data: (data.messages_per_day || []).map(d => d.threads),
+              borderColor: '#22c55e',
+              tension: 0.25,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { beginAtZero: true } },
+        },
+      });
+
+      // RAG sources
+      const by = r.by_source || {};
+      new Chart(el('chartRagSource'), {
+        type: 'bar',
+        data: {
+          labels: ['command', 'auto', 'assistant'],
+          datasets: [{
+            label: 'Eventos',
+            data: [by.command || 0, by.auto || 0, by.assistant || 0],
+            backgroundColor: ['#3b82f6', '#a855f7', '#f59e0b'],
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } },
+        },
+      });
+
+      // Feedback
+      new Chart(el('chartFeedback'), {
+        type: 'doughnut',
+        data: {
+          labels: ['👍 Positivos', '👎 Negativos'],
+          datasets: [{
+            data: [f.up || 0, f.down || 0],
+            backgroundColor: ['#22c55e', '#ef4444'],
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+        },
+      });
+    }
+
+    main();
+  </script>
+</body>
+</html>
